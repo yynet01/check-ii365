@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Cache-Control" content="no-cache">
+<title>接続診断ツール | ii365</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:    #0a3d8f;
+  --blue-lt: #1a5abf;
+  --blue-bg: #eff6ff;
+  --gray:    #f4f6f9;
+  --border:  #dde0e6;
+  --text:    #1a1a2e;
+  --sub:     #555e72;
+  --green:   #16a34a;
+  --green-bg:#f0fdf4;
+  --red:     #dc2626;
+  --red-bg:  #fef2f2;
+  --yellow:  #d97706;
+  --yellow-bg:#fffbeb;
+  --radius:  8px;
+}
+body { font-family: 'Hiragino Sans', 'Yu Gothic UI', sans-serif; font-size: 15px; background: var(--gray); color: var(--text); min-height: 100vh; }
+
+/* HEADER */
+.header { background: var(--blue); padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 16px; }
+.header-logo { color: #fff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; text-decoration: none; }
+.header-title { color: rgba(255,255,255,0.75); font-size: 14px; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 16px; }
+
+/* LAYOUT */
+.layout { display: flex; min-height: calc(100vh - 56px); }
+
+/* SIDEBAR */
+.sidebar { width: 220px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); padding: 24px 12px; min-height: calc(100vh - 56px); }
+.nav-label { font-size: 12px; font-weight: 700; color: var(--sub); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; padding: 0 4px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius); cursor: pointer; font-size: 15px; color: var(--sub); transition: background .15s, color .15s; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left; text-decoration: none; }
+.nav-item:hover { background: #e8edf5; color: var(--blue); }
+.nav-item.active { background: var(--blue-bg); color: var(--blue); font-weight: 600; }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+/* MAIN */
+.main { flex: 1; min-width: 0; padding: 32px; background: var(--gray); }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* CARD */
+.card { background: #fff; border-radius: var(--radius); border: 1px solid var(--border); padding: 28px; margin-bottom: 20px; }
+.card-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.card-desc { font-size: 14px; color: var(--sub); margin-bottom: 20px; }
+
+/* BUTTON */
+.btn-start { background: var(--blue); color: #fff; border: none; border-radius: var(--radius); padding: 12px 32px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s; display: inline-flex; align-items: center; gap: 8px; }
+.btn-start:hover { background: var(--blue-lt); }
+.btn-start:disabled { background: #aab0be; cursor: not-allowed; }
+.btn-copy { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; color: var(--sub); transition: border-color .15s, color .15s; }
+.btn-copy:hover { border-color: var(--blue); color: var(--blue); }
+
+/* RESULT */
+.result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 20px; }
+.result-item { background: var(--gray); border-radius: var(--radius); padding: 16px 18px; border: 1px solid var(--border); }
+.result-label { font-size: 13px; font-weight: 700; color: var(--sub); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+.result-value { font-size: 20px; font-weight: 700; color: var(--text); word-break: break-all; }
+.result-addr { font-size: 15px; color: var(--sub); margin-top: 4px; word-break: break-all; }
+.green { color: var(--green); }
+.red { color: var(--red); }
+.blue { color: var(--blue); }
+
+/* BADGE */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+.badge-green { background: var(--green-bg); color: var(--green); }
+.badge-blue  { background: var(--blue-bg);  color: var(--blue); }
+.badge-red   { background: var(--red-bg);   color: var(--red); }
+.badge-yellow{ background: var(--yellow-bg);color: var(--yellow); }
+
+/* PROGRESS */
+.progress-wrap { margin: 12px 0; }
+.progress-label { font-size: 14px; color: var(--sub); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--blue); border-radius: 4px; transition: width .3s; width: 0%; }
+.progress-fill-green { background: var(--green); }
+
+/* SPEED */
+.speed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.speed-box { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; background: #fff; }
+.speed-box-label { font-size: 13px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.speed-num { font-size: 36px; font-weight: 800; color: var(--blue); line-height: 1; }
+.speed-unit { font-size: 14px; color: var(--sub); margin-top: 4px; }
+
+/* STATUS */
+.status-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+.status-row:last-child { border-bottom: none; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.status-dot.ok  { background: var(--green); }
+.status-dot.err { background: var(--red); }
+.status-dot.running { background: var(--yellow); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* SPINNER */
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* INFO TABLE */
+.info-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.info-table tr { border-bottom: 1px solid var(--border); }
+.info-table tr:last-child { border-bottom: none; }
+.info-table th { width: 160px; padding: 12px 0; color: var(--sub); font-weight: 600; text-align: left; vertical-align: top; }
+.info-table td { padding: 12px 0; word-break: break-all; }
+
+/* COPY AREA */
+.copy-area { margin-top: 16px; background: var(--gray); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-size: 13px; font-family: monospace; white-space: pre-wrap; word-break: break-all; color: var(--sub); min-height: 80px; }
+
+/* FOOTER */
+.footer { text-align: center; padding: 24px; font-size: 13px; color: var(--sub); background: #fff; border-top: 1px solid var(--border); }
+
+/* COMPARE TABLE */
+.compare-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 16px; }
+.compare-table thead tr { background: var(--blue); color: #fff; }
+.compare-table th { padding: 10px 14px; text-align: center; }
+.compare-table th:first-child { text-align: left; border-radius: 6px 0 0 0; }
+.compare-table th:last-child { border-radius: 0 6px 0 0; }
+.compare-table td { padding: 10px 14px; text-align: center; border-bottom: 1px solid var(--border); }
+.compare-table td:first-child { text-align: left; background: var(--gray); font-weight: 600; color: var(--sub); }
+
+@media (max-width: 640px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-height: auto; }
+  .nav-item { display: inline-flex; width: auto; margin-right: 4px; }
+  .speed-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <a href="https://ii365.jp" class="header-logo">ii365</a>
+  <span class="header-title">接続診断ツール</span>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-label">診断メニュー</div>
+    <button class="nav-item active" id="nav-connection" onclick="switchPanel('connection', this)">
+      <span class="nav-icon">🔍</span> 接続判定
+    </button>
+    <button class="nav-item" id="nav-speed" onclick="switchPanel('speed', this)">
+      <span class="nav-icon">⚡</span> 速度測定
+    </button>
+    <button class="nav-item" id="nav-info" onclick="switchPanel('info', this)">
+      <span class="nav-icon">📋</span> 接続情報
+    </button>
+    <button class="nav-item" id="nav-env" onclick="switchPanel('env', this)">
+      <span class="nav-icon">🖥️</span> 環境情報
+    </button>
+
+    <div class="nav-label" style="margin-top:24px;">外部ツール</div>
+    <a class="nav-item" href="http://wa.kiriwake.jpne.co.jp/" target="_blank" rel="noopener">
+      <span class="nav-icon">🌐</span> IPv4/IPv6判定
+    </a>
+    <a class="nav-item" href="https://kiriwake.jpne.co.jp/v/" target="_blank" rel="noopener">
+      <span class="nav-icon">🔗</span> v6プラス利用判定
+    </a>
+
+  </aside>
+
+  <main class="main">
+
+    <!-- ① 接続判定 -->
+    <div class="panel active" id="panel-connection">
+      <div class="card">
+        <div class="card-title">接続判定</div>
+        <div class="card-desc">IPv4 / IPv6 の接続状況と回線種別（PPPoE / IPoE）を判定します。</div>
+        <button class="btn-start" id="btn-conn" onclick="startConnectionCheck()">▶ 判定開始</button>
+
+        <div id="conn-result" style="display:none;margin-top:24px;">
+          <div class="result-grid">
+            <div class="result-item">
+              <div class="result-label">IPv4 接続</div>
+              <div class="result-value" id="r-ipv4-status">-</div>
+              <div class="result-addr" id="r-ipv4-addr"></div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">IPv6 接続</div>
+              <div class="result-value" id="r-ipv6-status">-</div>
+              <div class="result-addr" id="r-ipv6-addr"></div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">回線種別</div>
+              <div class="result-value" id="r-line-type">-</div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">接続方式</div>
+              <div class="result-value" id="r-conn-type">-</div>
+            </div>
+          </div>
+          <div style="margin-top:20px;">
+            <div class="result-label" style="margin-bottom:10px;">判定詳細</div>
+            <div id="conn-steps"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 通信方式説明カード -->
+      <div class="card">
+        <div class="card-title">v6プラス・クロスパスの通信方式について</div>
+        <div class="card-desc">v6プラスとクロスパスでは、採用している通信方式が異なります。</div>
+
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>v6プラス（MAP-E）</th>
+              <th>クロスパス（DS-Lite）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>通信方式</td><td>MAP-E</td><td>DS-Lite</td></tr>
+            <tr><td>配布IPv4アドレス</td><td>共有グローバルIPv4</td><td>プライベートIPv4</td></tr>
+            <tr><td>NAT方式</td><td>NATステートレス</td><td>NATステートフル</td></tr>
+            <tr><td>ポート開放</td>
+              <td><span class="badge badge-yellow">可能だが制限あり</span></td>
+              <td><span class="badge badge-red">原則不可</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="font-size:13px;color:var(--sub);margin-bottom:20px;">※クロスパスは固定IP接続サービスをご契約いただいた場合は、ポート開放が可能です。</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div style="background:var(--blue-bg);border:1px solid #bdd4f5;border-radius:var(--radius);padding:16px;">
+            <div style="font-weight:700;color:var(--blue);margin-bottom:8px;">🔷 v6プラス — MAP-E方式</div>
+            <p style="font-size:14px;line-height:1.7;">ご自宅のWi-Fiルーターでアドレス変換（NAT）が行われます。<strong>共有グローバルIPv4アドレス</strong>が割り当てられ、一部のポート開放が可能です。ただし利用できるポート範囲に制限があります。</p>
+          </div>
+          <div style="background:var(--gray);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+            <div style="font-weight:700;color:var(--sub);margin-bottom:8px;">🔶 クロスパス — DS-Lite方式</div>
+            <p style="font-size:14px;line-height:1.7;">通信事業者側のネットワーク終端装置でアドレス変換（NAT）が行われます。ご自宅のルーターには<strong>プライベートIPv4アドレス</strong>が付与されるため、原則としてポート開放はできません。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② 速度測定 -->
+    <div class="panel" id="panel-speed">
+      <div class="card">
+        <div class="card-title">速度測定</div>
+        <div class="card-desc">Cloudflare経由のダウンロード速度とレイテンシを測定します。</div>
+        <button class="btn-start" id="btn-speed" onclick="startSpeedTest()">▶ 測定開始</button>
+
+        <div id="speed-result" style="display:none;margin-top:24px;">
+          <div class="progress-wrap">
+            <div class="progress-label"><span>ダウンロード</span><span id="cf-dl-val">-</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="cf-dl-bar"></div></div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-label"><span>レイテンシ</span><span id="cf-latency-val">-</span></div>
+            <div class="progress-bar"><div class="progress-fill progress-fill-green" id="cf-latency-bar"></div></div>
+          </div>
+
+          <div class="speed-grid">
+            <div class="speed-box">
+              <div class="speed-box-label">ダウンロード速度</div>
+              <div class="speed-num" id="final-cf">-</div>
+              <div class="speed-unit">Mbps</div>
+            </div>
+            <div class="speed-box">
+              <div class="speed-box-label">レイテンシ</div>
+              <div class="speed-num" id="final-latency">-</div>
+              <div class="speed-unit">ms</div>
+            </div>
+          </div>
+          <div style="margin-top:20px;">
+            <div class="result-label" style="margin-bottom:10px;">接続元情報</div>
+            <div class="result-grid">
+              <div class="result-item"><div class="result-label">所在地</div><div class="result-value" style="font-size:16px;" id="sp-location">-</div></div>
+              <div class="result-item"><div class="result-label">ISP / キャリア</div><div class="result-value" style="font-size:16px;" id="sp-isp">-</div></div>
+              <div class="result-item"><div class="result-label">AS番号</div><div class="result-value" style="font-size:16px;" id="sp-as">-</div></div>
+              <div class="result-item"><div class="result-label">タイムゾーン</div><div class="result-value" style="font-size:16px;" id="sp-tz">-</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ 接続情報 -->
+    <div class="panel" id="panel-info">
+      <div class="card">
+        <div class="card-title">接続情報</div>
+        <div class="card-desc">現在の接続に関する詳細情報を表示します。</div>
+        <button class="btn-start" id="btn-info" onclick="startInfoCheck()">▶ 情報取得</button>
+
+        <div id="info-result" style="display:none;margin-top:24px;">
+          <table class="info-table">
+            <tr><th>IPv4アドレス</th><td id="i-ipv4">-</td></tr>
+            <tr><th>IPv6アドレス</th><td id="i-ipv6">-</td></tr>
+            <tr><th>ブラウザ</th><td id="i-ua">-</td></tr>
+            <tr><th>OS</th><td id="i-os">-</td></tr>
+            <tr><th>言語</th><td id="i-lang">-</td></tr>
+            <tr><th>画面解像度</th><td id="i-screen">-</td></tr>
+            <tr><th>接続日時</th><td id="i-time">-</td></tr>
+            <tr><th>所在地</th><td id="i-location">-</td></tr>
+            <tr><th>ISP / キャリア</th><td id="i-isp">-</td></tr>
+            <tr><th>AS番号</th><td id="i-as">-</td></tr>
+            <tr><th>タイムゾーン</th><td id="i-tz">-</td></tr>
+          </table>
+          <div style="margin-top:20px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:14px;font-weight:600;color:var(--sub);">レポートをコピー</div>
+            <button class="btn-copy" onclick="copyReport()">📋 コピー</button>
+          </div>
+          <div class="copy-area" id="copy-area"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ 環境情報 -->
+    <div class="panel" id="panel-env">
+      <div class="card">
+        <div class="card-title">環境情報</div>
+        <div class="card-desc">ご利用中のデバイス・ブラウザ・ネットワーク環境の詳細情報を表示します。</div>
+        <button class="btn-start" id="btn-env" onclick="startEnvCheck()">▶ 情報取得</button>
+
+        <div id="env-result" style="display:none;margin-top:24px;">
+          <table class="info-table">
+            <tr><th>OS</th><td id="e-os">-</td></tr>
+            <tr><th>ブラウザ</th><td id="e-ua">-</td></tr>
+            <tr><th>デバイス種別</th><td id="e-device">-</td></tr>
+            <tr><th>IPv4アドレス</th><td id="e-ipv4">-</td></tr>
+            <tr><th>IPv6アドレス</th><td id="e-ipv6">-</td></tr>
+            <tr><th>画面解像度 / ウィンドウサイズ</th><td id="e-screen">-</td></tr>
+            <tr><th>色深度 / ピクセル比</th><td id="e-color">-</td></tr>
+            <tr><th>Cookieの状態</th><td id="e-cookie">-</td></tr>
+            <tr><th>JavaScriptの状態</th><td id="e-js">-</td></tr>
+            <tr><th>言語 / タイムゾーン</th><td id="e-lang">-</td></tr>
+            <tr><th>推定ネットワーク回線 <span style="font-size:11px;font-weight:400;color:var(--sub);">※推定値</span></th><td id="e-network">-</td></tr>
+            <tr><th>プロトコル</th><td id="e-protocol">-</td></tr>
+            <tr><th>所在地</th><td id="e-location">-</td></tr>
+            <tr><th>ISP / キャリア</th><td id="e-isp">-</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<footer class="footer">
+  Copyright &copy; YYNET Inc. / <a href="https://ii365.jp" style="color:var(--blue);">ii365</a>
+</footer>
+
+<script>
+
+// ========== ip-api.com 所在地・キャリア取得 ==========
+function fetchIpInfo(callback) {
+  fetch('https://ipapi.co/json/')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.city) {
+        callback({
+          location: d.city + ', ' + (d.region || '') + ', ' + (d.country_name || ''),
+          isp: d.org || '-',
+          as: d.asn || '-',
+          timezone: d.timezone || '-'
+        });
+      } else {
+        callback(null);
+      }
+    }).catch(function(){ callback(null); });
+}
+
+// ========== パネル切替 ==========
+function switchPanel(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+// ========== ① 接続判定 ==========
+var stepCount = 0;
+
+function addStep(msg, status) {
+  var div = document.createElement('div');
+  div.className = 'status-row';
+  div.id = 'step-' + stepCount;
+  div.innerHTML = '<div class="status-dot ' + status + '"></div><span>' + msg + '</span>';
+  document.getElementById('conn-steps').appendChild(div);
+  stepCount++;
+}
+
+function updateStep(idx, msg, status) {
+  var row = document.getElementById('step-' + idx);
+  if (!row) return;
+  row.querySelector('.status-dot').className = 'status-dot ' + status;
+  row.querySelector('span').textContent = msg;
+}
+
+function startConnectionCheck() {
+  stepCount = 0;
+  var btn = document.getElementById('btn-conn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 判定中...';
+  document.getElementById('conn-result').style.display = 'block';
+  document.getElementById('conn-steps').innerHTML = '';
+  ['r-ipv4-status','r-ipv6-status','r-line-type','r-conn-type'].forEach(function(id) {
+    document.getElementById(id).textContent = '確認中...';
+    document.getElementById(id).className = 'result-value';
+  });
+  document.getElementById('r-ipv4-addr').textContent = '';
+  document.getElementById('r-ipv6-addr').textContent = '';
+
+  var ipv4 = null, ipv6 = null;
+
+  addStep('IPv4接続確認中...', 'running');
+  var step0 = stepCount - 1;
+  var p4 = Promise.race([
+    fetch('https://api4.ipify.org?format=json').then(function(r){ return r.json(); }),
+    new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 6000); })
+  ]).then(function(data) {
+    ipv4 = data.ip;
+    updateStep(step0, 'IPv4接続: OK（' + ipv4 + '）', 'ok');
+    document.getElementById('r-ipv4-status').textContent = '✓ 接続あり';
+    document.getElementById('r-ipv4-status').classList.add('green');
+    document.getElementById('r-ipv4-addr').textContent = ipv4;
+  }).catch(function() {
+    updateStep(step0, 'IPv4接続: なし', 'err');
+    document.getElementById('r-ipv4-status').textContent = '✗ 接続なし';
+    document.getElementById('r-ipv4-status').classList.add('red');
+  });
+
+  addStep('IPv6接続確認中...', 'running');
+  var step1 = stepCount - 1;
+  var p6 = Promise.race([
+    fetch('https://api6.ipify.org?format=json').then(function(r){ return r.json(); }),
+    new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); }, 6000); })
+  ]).then(function(data) {
+    ipv6 = data.ip;
+    updateStep(step1, 'IPv6接続: OK（' + ipv6 + '）', 'ok');
+    document.getElementById('r-ipv6-status').textContent = '✓ 接続あり';
+    document.getElementById('r-ipv6-status').classList.add('green');
+    document.getElementById('r-ipv6-addr').textContent = ipv6;
+  }).catch(function() {
+    updateStep(step1, 'IPv6接続: なし', 'err');
+    document.getElementById('r-ipv6-status').textContent = '✗ 接続なし';
+    document.getElementById('r-ipv6-status').classList.add('red');
+  });
+
+  addStep('回線種別判定中...', 'running');
+  var step2 = stepCount - 1;
+
+  Promise.all([p4, p6]).then(function() {
+    var lineType = '-', connType = '-';
+    if (ipv6) {
+      if (ipv6.startsWith('240b:')) {
+        lineType = 'IPoE（v6プラス）';
+        connType = 'MAP-E';
+        updateStep(step2, 'v6プラス（MAP-E）接続を確認', 'ok');
+      } else if (ipv6.startsWith('2400:4050') || ipv6.startsWith('2400:')) {
+        lineType = 'IPoE（クロスパス）';
+        connType = 'DS-Lite';
+        updateStep(step2, 'クロスパス（DS-Lite）接続を確認', 'ok');
+      } else {
+        lineType = 'IPoE（IPv6対応回線）';
+        connType = 'IPv6接続';
+        updateStep(step2, 'IPv6接続を確認（方式不明）', 'ok');
+      }
+    } else if (ipv4) {
+      lineType = 'PPPoE（IPv4）';
+      connType = 'PPPoE接続';
+      updateStep(step2, 'PPPoE（IPv4のみ）接続を確認', 'ok');
+    } else {
+      updateStep(step2, '回線種別を判定できませんでした', 'err');
+    }
+    document.getElementById('r-line-type').textContent = lineType;
+    document.getElementById('r-conn-type').textContent = connType;
+    btn.disabled = false;
+    btn.innerHTML = '▶ 再判定';
+  });
+}
+
+// ========== ② 速度測定 ==========
+function startSpeedTest() {
+  var btn = document.getElementById('btn-speed');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 測定中...';
+  document.getElementById('speed-result').style.display = 'block';
+  ['cf-dl-bar','cf-latency-bar'].forEach(function(id) {
+    document.getElementById(id).style.width = '0%';
+  });
+  ['cf-dl-val','cf-latency-val','final-cf','final-latency'].forEach(function(id) {
+    document.getElementById(id).textContent = '測定中...';
+  });
+
+  // Cloudflareレイテンシ
+  var latencyDone = false;
+  var times = [];
+  function measureLatency(i) {
+    if (i >= 5) {
+      var latency = Math.round(times.reduce(function(a,b){return a+b;}) / times.length);
+      document.getElementById('cf-latency-val').textContent = latency + ' ms';
+      document.getElementById('final-latency').textContent = latency;
+      var pct = Math.max(0, Math.min(100, 100 - latency / 2));
+      document.getElementById('cf-latency-bar').style.width = pct + '%';
+      latencyDone = true;
+      return;
+    }
+    var s = performance.now();
+    fetch('https://1.1.1.1/cdn-cgi/trace', { cache: 'no-store', mode: 'no-cors' })
+      .then(function() {
+        times.push(performance.now() - s);
+        measureLatency(i + 1);
+      }).catch(function() {
+        times.push(500);
+        measureLatency(i + 1);
+      });
+  }
+  measureLatency(0);
+
+  // Cloudflareダウンロード
+  var cfUrl = 'https://speed.cloudflare.com/__down?bytes=10000000';
+  var start = performance.now();
+  fetch(cfUrl, { cache: 'no-store' }).then(function(res) {
+    var reader = res.body.getReader();
+    var loaded = 0;
+    var total = 10000000;
+    function read() {
+      return reader.read().then(function(result) {
+        if (result.done) {
+          var elapsed = (performance.now() - start) / 1000;
+          var cfSpeed = ((loaded * 8) / (1024 * 1024) / elapsed).toFixed(1);
+          document.getElementById('final-cf').textContent = cfSpeed;
+          document.getElementById('cf-dl-bar').style.width = '100%';
+          btn.disabled = false;
+          btn.innerHTML = '▶ 再測定';
+          fetchIpInfo(function(info) {
+            if (!info) return;
+            document.getElementById('sp-location').textContent = info.location;
+            document.getElementById('sp-isp').textContent = info.isp;
+            document.getElementById('sp-as').textContent = info.as;
+            document.getElementById('sp-tz').textContent = info.timezone;
+          });
+          return;
+        }
+        loaded += result.value.length;
+        var pct = Math.min((loaded / total) * 100, 100);
+        document.getElementById('cf-dl-bar').style.width = pct + '%';
+        var elapsed = (performance.now() - start) / 1000;
+        var mbps = ((loaded * 8) / (1024 * 1024) / elapsed).toFixed(1);
+        document.getElementById('cf-dl-val').textContent = mbps + ' Mbps';
+        return read();
+      });
+    }
+    return read();
+  }).catch(function() {
+    document.getElementById('cf-dl-val').textContent = '測定失敗';
+    document.getElementById('final-cf').textContent = '-';
+    btn.disabled = false;
+    btn.innerHTML = '▶ 再測定';
+    // 所在地・キャリア取得
+    fetchIpInfo(function(info) {
+      if (!info) return;
+      document.getElementById('sp-location').textContent = info.location;
+      document.getElementById('sp-isp').textContent = info.isp;
+      document.getElementById('sp-as').textContent = info.as;
+      document.getElementById('sp-tz').textContent = info.timezone;
+    });
+  });
+}
+
+// ========== ③ 接続情報 ==========
+function startInfoCheck() {
+  var btn = document.getElementById('btn-info');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 取得中...';
+  document.getElementById('info-result').style.display = 'block';
+
+  var ipv4 = '-', ipv6 = '-';
+  var p4 = fetch('https://api4.ipify.org?format=json')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ ipv4 = d.ip; })
+    .catch(function(){});
+  var p6 = fetch('https://api6.ipify.org?format=json')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ ipv6 = d.ip; })
+    .catch(function(){});
+
+  Promise.all([p4, p6]).then(function() {
+    document.getElementById('i-ipv4').textContent = ipv4;
+    document.getElementById('i-ipv6').textContent = ipv6;
+
+    var ua = navigator.userAgent;
+    var browser = 'その他', os = 'その他';
+    if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) browser = 'Google Chrome';
+    else if (/Firefox\//.test(ua)) browser = 'Firefox';
+    else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+    else if (/Edg\//.test(ua)) browser = 'Microsoft Edge';
+    if (/Windows/.test(ua)) os = 'Windows';
+    else if (/Mac/.test(ua)) os = 'macOS';
+    else if (/iPhone|iPad/.test(ua)) os = 'iOS';
+    else if (/Android/.test(ua)) os = 'Android';
+    else if (/Linux/.test(ua)) os = 'Linux';
+
+    document.getElementById('i-ua').textContent = browser;
+    document.getElementById('i-os').textContent = os;
+    document.getElementById('i-lang').textContent = navigator.language;
+    document.getElementById('i-screen').textContent = screen.width + ' × ' + screen.height;
+    document.getElementById('i-time').textContent = new Date().toLocaleString('ja-JP');
+
+    var report = [
+      '【ii365 接続情報レポート】',
+      '取得日時：' + new Date().toLocaleString('ja-JP'),
+      '',
+      'IPv4アドレス：' + ipv4,
+      'IPv6アドレス：' + ipv6,
+      'ブラウザ：' + browser,
+      'OS：' + os,
+      '言語：' + navigator.language,
+      '画面解像度：' + screen.width + ' × ' + screen.height,
+    ].join('\n');
+    document.getElementById('copy-area').textContent = report;
+
+    // 所在地・キャリア取得
+    fetchIpInfo(function(info) {
+      if (!info) return;
+      document.getElementById('i-location').textContent = info.location;
+      document.getElementById('i-isp').textContent = info.isp;
+      document.getElementById('i-as').textContent = info.as;
+      document.getElementById('i-tz').textContent = info.timezone;
+    });
+    btn.disabled = false;
+    btn.innerHTML = '▶ 再取得';
+  });
+}
+
+
+// ========== ④ 環境情報 ==========
+function startEnvCheck() {
+  var btn = document.getElementById('btn-env');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 取得中...';
+  document.getElementById('env-result').style.display = 'block';
+
+  var ipv4 = '-', ipv6 = '-';
+  var p4 = fetch('https://api4.ipify.org?format=json')
+    .then(function(r){ return r.json(); }).then(function(d){ ipv4 = d.ip; }).catch(function(){});
+  var p6 = fetch('https://api6.ipify.org?format=json')
+    .then(function(r){ return r.json(); }).then(function(d){ ipv6 = d.ip; }).catch(function(){});
+
+  Promise.all([p4, p6]).then(function() {
+    var ua = navigator.userAgent;
+
+    // OS判定
+    var os = 'その他';
+    if (/Windows NT 10.0/.test(ua)) { os = 'Windows 10/11'; }
+    else if (/Windows NT 6.3/.test(ua)) { os = 'Windows 8.1'; }
+    else if (/Windows NT 6.1/.test(ua)) { os = 'Windows 7'; }
+    else if (/Mac OS X ([\d_]+)/.test(ua)) { os = 'macOS ' + ua.match(/Mac OS X ([\d_]+)/)[1].replace(/_/g,'.'); }
+    else if (/iPhone OS ([\d_]+)/.test(ua)) { os = 'iOS ' + ua.match(/iPhone OS ([\d_]+)/)[1].replace(/_/g,'.'); }
+    else if (/iPad.*OS ([\d_]+)/.test(ua)) { os = 'iPadOS ' + ua.match(/iPad.*OS ([\d_]+)/)[1].replace(/_/g,'.'); }
+    else if (/Android ([\d.]+)/.test(ua)) { os = 'Android ' + ua.match(/Android ([\d.]+)/)[1]; }
+    else if (/Linux/.test(ua)) { os = 'Linux'; }
+
+    // Windows 11判定
+    if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+      navigator.userAgentData.getHighEntropyValues(['platformVersion']).then(function(d) {
+        if (d.platformVersion && parseFloat(d.platformVersion) >= 13) {
+          document.getElementById('e-os').textContent = 'Windows 11';
+        }
+      }).catch(function(){});
+    }
+
+    // ブラウザ判定
+    var browser = 'その他';
+    var edgeMatch = ua.match(/Edg\/([\d.]+)/);
+    var chromeMatch = ua.match(/Chrome\/([\d.]+)/);
+    var firefoxMatch = ua.match(/Firefox\/([\d.]+)/);
+    var safariMatch = ua.match(/Version\/([\d.]+).*Safari/);
+    if (edgeMatch) { browser = 'Microsoft Edge ' + edgeMatch[1]; }
+    else if (chromeMatch && !/Edg/.test(ua)) { browser = 'Google Chrome ' + chromeMatch[1]; }
+    else if (firefoxMatch) { browser = 'Firefox ' + firefoxMatch[1]; }
+    else if (safariMatch) { browser = 'Safari ' + safariMatch[1]; }
+
+    // デバイス種別
+    var device = 'Desktop / PC';
+    if (/iPhone/.test(ua)) device = 'iPhone';
+    else if (/iPad/.test(ua)) device = 'iPad';
+    else if (/Android/.test(ua) && /Mobile/.test(ua)) device = 'Android スマートフォン';
+    else if (/Android/.test(ua)) device = 'Android タブレット';
+
+    // ネットワーク回線推定
+    var network = '取得不可（ブラウザ非対応）';
+    if (navigator.connection) {
+      var effMap = { 'slow-2g': '2G (低速)', '2g': '2G', '3g': '3G', '4g': '4G / LTE以上' };
+      var typeMap = { wifi: 'Wi-Fi', cellular: 'モバイル回線', ethernet: '有線LAN' };
+      if (navigator.connection.type && typeMap[navigator.connection.type]) {
+        network = typeMap[navigator.connection.type];
+      } else if (navigator.connection.effectiveType) {
+        network = effMap[navigator.connection.effectiveType] || navigator.connection.effectiveType;
+        if (navigator.connection.effectiveType === '4g') {
+          network += '（PC環境では参考値）';
+        }
+      }
+    }
+
+    document.getElementById('e-os').textContent = os;
+    document.getElementById('e-ua').textContent = browser;
+    document.getElementById('e-device').textContent = device;
+    document.getElementById('e-ipv4').textContent = ipv4 !== '-' ? ipv4 : '取得できませんでした';
+    document.getElementById('e-ipv6').textContent = ipv6 !== '-' ? ipv6 : '取得できませんでした';
+    document.getElementById('e-screen').textContent = screen.width + 'x' + screen.height + ' / ' + window.innerWidth + 'x' + window.innerHeight;
+    document.getElementById('e-color').textContent = screen.colorDepth + '-bit / ' + window.devicePixelRatio + 'x';
+    document.getElementById('e-cookie').textContent = navigator.cookieEnabled ? '有効 (OK)' : '無効';
+    document.getElementById('e-js').textContent = '有効 (OK)';
+    document.getElementById('e-lang').textContent = navigator.language + ' (' + Intl.DateTimeFormat().resolvedOptions().timeZone + ')';
+    document.getElementById('e-network').textContent = network;
+    document.getElementById('e-protocol').textContent = location.protocol === 'https:' ? 'HTTPS' : 'HTTP';
+
+    // 所在地・ISP取得
+    fetchIpInfo(function(info) {
+      if (!info) return;
+      document.getElementById('e-location').textContent = info.location;
+      document.getElementById('e-isp').textContent = info.isp;
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '▶ 再取得';
+  });
+}
+function copyReport() {
+  var text = document.getElementById('copy-area').textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = event.currentTarget;
+    btn.textContent = '✓ コピー完了';
+    setTimeout(function(){ btn.textContent = '📋 コピー'; }, 2000);
+  });
+}
+</script>
+</body>
+</html>
