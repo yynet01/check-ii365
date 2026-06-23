@@ -133,6 +133,7 @@ body { font-family: 'Hiragino Sans', 'Yu Gothic UI', sans-serif; font-size: 15px
   .speed-grid { grid-template-columns: 1fr; }
 }
 </style>
+<script src="/ndt7.js"></script>
 </head>
 <body>
 
@@ -155,6 +156,9 @@ body { font-family: 'Hiragino Sans', 'Yu Gothic UI', sans-serif; font-size: 15px
     </button>
     <button class="nav-item" id="nav-env" onclick="switchPanel('env', this)">
       <span class="nav-icon">🖥️</span> 環境情報
+    </button>
+    <button class="nav-item" id="nav-mlab" onclick="switchPanel('mlab', this)">
+      <span class="nav-icon">🌐</span> M-Lab NDT7
     </button>
 
     <div class="nav-label" style="margin-top:24px;">外部ツール</div>
@@ -246,7 +250,7 @@ body { font-family: 'Hiragino Sans', 'Yu Gothic UI', sans-serif; font-size: 15px
     <div class="panel" id="panel-speed">
       <div class="card">
         <div class="card-title">速度測定</div>
-        <div class="card-desc">Cloudflare経由のダウンロード速度とレイテンシを測定します。</div>
+        <div class="card-desc">Cloudflare・M-Lab NDT7によるダウンロード/アップロード速度を測定します。</div>
         <button class="btn-start" id="btn-speed" onclick="startSpeedTest()">▶ 測定開始</button>
 
         <div id="speed-result" style="display:none;margin-top:24px;">
@@ -338,6 +342,40 @@ body { font-family: 'Hiragino Sans', 'Yu Gothic UI', sans-serif; font-size: 15px
             <tr><th>所在地</th><td id="e-location">-</td></tr>
             <tr><th>ISP / キャリア</th><td id="e-isp">-</td></tr>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ M-Lab NDT7 -->
+    <div class="panel" id="panel-mlab">
+      <div class="card">
+        <div class="card-title">M-Lab NDT7 速度測定</div>
+        <div class="card-desc">世界100+拠点から最寄りサーバーを自動選択してダウンロード・アップロード速度を測定します。<br><span style="font-size:12px;color:var(--red);">※測定データはM-Labにより公開されます（IPアドレス含む）</span></div>
+        <button class="btn-start" id="btn-mlab" onclick="startMlabTest()">▶ 測定開始</button>
+
+        <div id="mlab-result" style="display:none;margin-top:24px;">
+          <div class="progress-wrap">
+            <div class="progress-label"><span>ダウンロード</span><span id="ndt-dl-val">-</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="ndt-dl-bar"></div></div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-label"><span>アップロード</span><span id="ndt-ul-val">-</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="background:var(--green);" id="ndt-ul-bar"></div></div>
+          </div>
+
+          <div class="speed-grid">
+            <div class="speed-box">
+              <div class="speed-box-label">ダウンロード速度</div>
+              <div class="speed-num" id="final-ndt-dl">-</div>
+              <div class="speed-unit">Mbps</div>
+            </div>
+            <div class="speed-box">
+              <div class="speed-box-label">アップロード速度</div>
+              <div class="speed-num" id="final-ndt-ul">-</div>
+              <div class="speed-unit">Mbps</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--sub);margin-top:8px;" id="ndt-server-info"></div>
         </div>
       </div>
     </div>
@@ -727,6 +765,156 @@ function startEnvCheck() {
     btn.innerHTML = '▶ 再取得';
   });
 }
+
+// ========== M-Lab NDT7 速度測定 ==========
+function startNdt7Test() {
+  ['ndt-dl-val','ndt-ul-val','final-ndt-dl','final-ndt-ul'].forEach(function(id) {
+    document.getElementById(id).textContent = '測定中...';
+  });
+  document.getElementById('ndt-dl-bar').style.width = '0%';
+  document.getElementById('ndt-ul-bar').style.width = '0%';
+  document.getElementById('ndt-server-info').textContent = '';
+
+  if (typeof ndt7 === 'undefined') {
+    ['ndt-dl-val','ndt-ul-val','final-ndt-dl','final-ndt-ul'].forEach(function(id) {
+      document.getElementById(id).textContent = 'ライブラリ読み込みエラー';
+    });
+    return;
+  }
+
+  ndt7.test(
+    {
+      userAcceptedDataPolicy: true,
+      mlabDataPolicyInapplicable: false,
+      metadata: {
+        client_name: 'ii365-check',
+        client_version: '1.0'
+      }
+    },
+    {
+      serverChosen: function(server) {
+        document.getElementById('ndt-server-info').textContent =
+          'サーバー: ' + (server.location ? server.location.city + ', ' + server.location.country : server.hostname || '-');
+      },
+      downloadMeasurement: function(data) {
+        if (data.Source === 'client' && data.Data && data.Data.MeanClientMbps) {
+          var mbps = data.Data.MeanClientMbps.toFixed(1);
+          document.getElementById('ndt-dl-val').textContent = mbps + ' Mbps';
+          var pct = Math.min(mbps / 2, 100);
+          document.getElementById('ndt-dl-bar').style.width = pct + '%';
+        }
+      },
+      downloadComplete: function(data) {
+        if (data && data.LastClientMeasurement && data.LastClientMeasurement.MeanClientMbps) {
+          var mbps = data.LastClientMeasurement.MeanClientMbps.toFixed(1);
+          document.getElementById('final-ndt-dl').textContent = mbps;
+          document.getElementById('ndt-dl-bar').style.width = '100%';
+        }
+      },
+      uploadMeasurement: function(data) {
+        if (data.Source === 'client' && data.Data && data.Data.MeanClientMbps) {
+          var mbps = data.Data.MeanClientMbps.toFixed(1);
+          document.getElementById('ndt-ul-val').textContent = mbps + ' Mbps';
+          var pct = Math.min(mbps / 2, 100);
+          document.getElementById('ndt-ul-bar').style.width = pct + '%';
+        }
+      },
+      uploadComplete: function(data) {
+        if (data && data.LastClientMeasurement && data.LastClientMeasurement.MeanClientMbps) {
+          var mbps = data.LastClientMeasurement.MeanClientMbps.toFixed(1);
+          document.getElementById('final-ndt-ul').textContent = mbps;
+          document.getElementById('ndt-ul-bar').style.width = '100%';
+        }
+      },
+      error: function(err) {
+        console.error('NDT7 error:', err);
+        ['ndt-dl-val','ndt-ul-val'].forEach(function(id) {
+          document.getElementById(id).textContent = '測定失敗';
+        });
+      }
+    }
+  );
+}
+
+// ========== ⑤ M-Lab NDT7 ==========
+function startMlabTest() {
+  var btn = document.getElementById('btn-mlab');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 測定中...';
+  document.getElementById('mlab-result').style.display = 'block';
+
+  ['ndt-dl-val','ndt-ul-val','final-ndt-dl','final-ndt-ul'].forEach(function(id) {
+    document.getElementById(id).textContent = '測定中...';
+  });
+  document.getElementById('ndt-dl-bar').style.width = '0%';
+  document.getElementById('ndt-ul-bar').style.width = '0%';
+  document.getElementById('ndt-server-info').textContent = '';
+
+  if (typeof ndt7 === 'undefined') {
+    ['final-ndt-dl','final-ndt-ul'].forEach(function(id) {
+      document.getElementById(id).textContent = 'エラー';
+    });
+    btn.disabled = false;
+    btn.innerHTML = '▶ 再測定';
+    return;
+  }
+
+  var dlDone = false;
+
+  ndt7.test(
+    {
+      userAcceptedDataPolicy: true,
+      mlabDataPolicyInapplicable: false,
+      metadata: { client_name: 'ii365-check', client_version: '1.0' },
+      downloadworkerfile: '/ndt7-download-worker.js',
+      uploadworkerfile: '/ndt7-upload-worker.js'
+    },
+    {
+      serverChosen: function(server) {
+        document.getElementById('ndt-server-info').textContent =
+          'サーバー: ' + (server.location ? server.location.city + ', ' + server.location.country : server.hostname || '-');
+      },
+      downloadMeasurement: function(data) {
+        if (!data || !data.Data || !data.Data.MeanClientMbps) return;
+        var mbps = parseFloat(data.Data.MeanClientMbps).toFixed(1);
+        document.getElementById('ndt-dl-val').textContent = mbps + ' Mbps';
+        document.getElementById('ndt-dl-bar').style.width = Math.min(mbps / 2, 100) + '%';
+      },
+      downloadComplete: function(data) {
+        console.log('NDT7 download complete:', data);
+        var mbps = data && data.LastClientMeasurement && data.LastClientMeasurement.MeanClientMbps;
+        if (mbps) {
+          document.getElementById('final-ndt-dl').textContent = parseFloat(mbps).toFixed(1);
+          document.getElementById('ndt-dl-bar').style.width = '100%';
+        }
+      },
+      uploadMeasurement: function(data) {
+        if (!data || !data.Data || !data.Data.MeanClientMbps) return;
+        var mbps = parseFloat(data.Data.MeanClientMbps).toFixed(1);
+        document.getElementById('ndt-ul-val').textContent = mbps + ' Mbps';
+        document.getElementById('ndt-ul-bar').style.width = Math.min(mbps / 2, 100) + '%';
+      },
+      uploadComplete: function(data) {
+        console.log('NDT7 upload complete:', data);
+        var mbps = data && data.LastClientMeasurement && data.LastClientMeasurement.MeanClientMbps;
+        if (mbps) {
+          document.getElementById('final-ndt-ul').textContent = parseFloat(mbps).toFixed(1);
+          document.getElementById('ndt-ul-bar').style.width = '100%';
+        }
+        btn.disabled = false;
+        btn.innerHTML = '▶ 再測定';
+      },
+      error: function(err) {
+        console.error('NDT7 error:', err);
+        document.getElementById('ndt-dl-val').textContent = '測定失敗';
+        document.getElementById('ndt-ul-val').textContent = '測定失敗';
+        btn.disabled = false;
+        btn.innerHTML = '▶ 再測定';
+      }
+    }
+  );
+}
+
 function copyReport() {
   var text = document.getElementById('copy-area').textContent;
   navigator.clipboard.writeText(text).then(function() {
